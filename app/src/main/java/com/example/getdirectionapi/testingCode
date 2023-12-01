@@ -1,0 +1,164 @@
+private fun getDirections() {
+        val apiService = RetrofitClient().create()
+
+        val apiKey = "b75b1af2dbmshcf32852a614c58cp1280cajsne0e57708a417"
+//        val apiKey = "7a46b06a93msh22d0c0fb04e7d7ap103e05jsn94b78fed3670"
+        val apiHost = "trueway-directions2.p.rapidapi.com"
+        val stops = "40.629041%2C-74.025606%3B40.630099%2C-73.993521%3B40.644895%2C-74.013818%3B40.627177%2C-73.980853"
+
+        Log.d("+++++++++++++++", "onResponse: ${apiKey} , ${apiHost} , ${stops}")
+        val call = apiService.getDirections(stops)
+        call.enqueue(object : Callback<DirectionResponse> {
+            override fun onResponse(
+                call: Call<DirectionResponse>,
+                response: Response<DirectionResponse>
+            ) {
+                Log.d("=========////", "onResponse: ${response.body()}")
+
+                if (response.isSuccessful) {
+                    val directionResponse = response.body()
+                    Log.d("----------", "onResponse: ${response}")
+                    if (directionResponse != null) {
+                        Log.d("API Response", "Direction Response: $directionResponse")
+                        // Add more logging here if needed
+                        displayRoute(directionResponse)
+                    } else {
+                        Log.e("API Response", "Direction Response is null")
+                    }
+                } else {
+                    Log.e("API Response", "Error: ${response.code()}")
+                    // Log the error body if available
+                    response.errorBody()?.string()?.let {
+                        Log.e("API Response", "Error Body: $it")
+                    }
+                }
+            }
+            override fun onFailure(call: Call<DirectionResponse>, t: Throwable) {
+                Toast.makeText(this@MainActivity,"Network error",Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+//    private fun displayRoute(directionResponse: DirectionResponse) {
+//        val route = directionResponse.routes.firstOrNull()
+//        route?.let {
+//            val points = PolylineOptions().addAll(decodePolyline(it.overview_polyline.points))
+//            map.addPolyline(points)
+//        }
+//    }
+
+
+    private fun displayRoute(directionResponse: DirectionResponse) {
+        val routes = directionResponse.routes
+        Log.d("-------------------------", "displayRoute: ${routes}")
+
+        if (routes.isNullOrEmpty()) {
+            // Handle the case where routes is null or empty
+            Toast.makeText(this,"routes is null or empty",Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val route = routes.firstOrNull()
+
+        if (route != null) {
+            val points = PolylineOptions().addAll(decodePolyline(route.overview_polyline.points))
+            map.addPolyline(points)
+        } else {
+            Toast.makeText(this,"routes is null--------------",Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun decodePolyline(encoded: String): List<LatLng> {
+        val poly = ArrayList<LatLng>()
+        var index = 0
+        val len = encoded.length
+        var lat = 0
+        var lng = 0
+
+        while (index < len) {
+            var b: Int
+            var shift = 0
+            var result = 0
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lat += dlat
+
+            shift = 0
+            result = 0
+            do {
+                b = encoded[index++].toInt() - 63
+                result = result or (b and 0x1f shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+            lng += dlng
+
+            val p = LatLng(lat.toDouble() / 1E5, lng.toDouble() / 1E5)
+            poly.add(p)
+        }
+        Log.d("Decoded Points", "Decoded Points: $poly")
+        return poly
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapFragment.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapFragment.onPause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mapFragment.onDestroy()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapFragment.onLowMemory()
+    }
+}
+
+
+data class DirectionResponse(
+    val routes: List<Route>
+)
+
+data class Route(
+    val overview_polyline: OverviewPolyline
+)
+
+data class OverviewPolyline(
+    val points: String
+)
+
+
+//data class CatResponse(
+//    val id: String,
+//    val width: Int,
+//    val height: Int,
+//    val url: String,
+//    val breeds: List<Breed>
+//)
+//data class Breed(
+//    val weight: Weight,
+//    val id: String,
+//    val name: String,
+//    val temperament: String,
+//    val origin: String,
+//    val countryCodes: String,
+//    val countryCode: String,
+//    val lifeSpan: String,
+//    val wikipediaUrl: String
+//)
+//
+//data class Weight(
+//    val imperial: String,
+//    val metric: String
+//)

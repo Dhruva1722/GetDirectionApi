@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">GetDirectionApi</string>
+    <string name="hint">Please type language...</string>
+    <string name="submit">Submit</string>
+    <string name="submitted_lang">Submitted language:</string>
+
+    <string-array name="Languages">
+        <item>Java</item>
+        <item>Kotlin</item>
+        <item>Swift</item>
+        <item>Python</item>
+        <item>Scala</item>
+        <item>Perl</item>
+        <item>Javascript</item>
+        <item>Jquery</item>
+    </string-array>
+    <string name="title_activity_maps">MapsActivity</string>
+</resources>
