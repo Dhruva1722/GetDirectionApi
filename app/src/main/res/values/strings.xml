@@ -15,4 +15,6 @@
         <item>Jquery</item>
     </string-array>
     <string name="title_activity_maps">MapsActivity</string>
+    <string name="title_activity_maps2">MapsActivity2</string>
+    <string name="title_map_tester" />
 </resources>

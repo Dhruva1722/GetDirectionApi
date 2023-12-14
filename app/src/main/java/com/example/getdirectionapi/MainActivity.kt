@@ -38,8 +38,6 @@ class MainActivity : AppCompatActivity(){
     private lateinit var destinationEdt: EditText
     private lateinit var submitBtn: Button
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -49,14 +47,14 @@ class MainActivity : AppCompatActivity(){
 
         submitBtn = findViewById(R.id.submitBtn)
         submitBtn.setOnClickListener {
-            val origin = originEdt.text.toString()
-            val destination = destinationEdt.text.toString()
+//            val origin = originEdt.text.toString()
+//            val destination = destinationEdt.text.toString()
 
             // Create an Intent to start the MapActivity
             val intent = Intent(this@MainActivity, MapsActivity::class.java)
             // Pass data to MapActivity using extras
-            intent.putExtra("origin", origin)
-            intent.putExtra("destination", destination)
+//            intent.putExtra("origin", origin)
+//            intent.putExtra("destination", destination)
             // Start the MapActivity
             startActivity(intent)
         }

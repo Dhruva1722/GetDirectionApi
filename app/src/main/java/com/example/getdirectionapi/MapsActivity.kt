@@ -3,23 +3,28 @@ package com.example.getdirectionapi
 import android.graphics.Color
 import android.location.Address
 import android.location.Geocoder
+import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.example.getdirectionapi.databinding.ActivityMapsBinding
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import okhttp3.Call
 import okhttp3.Callback
@@ -39,6 +44,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var destination : String
     private lateinit var geocoder: Geocoder
 
+
+    private lateinit var polyline: Polyline
+    private lateinit var locationCallback: LocationCallback
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -50,9 +59,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+
+
+
         val origin = intent.getStringExtra("origin")
         val destination = intent.getStringExtra("destination")
-
 
         // Now you have the values of origin and destination, use them as needed
         Log.d("MapsActivity", "Origin: $origin, Destination: $destination")
@@ -61,12 +73,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
-
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
 
-
     }
+
+
+
+         //Start location updates using FusedLocationProviderClient
+//         val locationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+//         locationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+
+
+
+
 
     private fun requestDirections(origin: String?, destination: String?) {
         val client = OkHttpClient()
