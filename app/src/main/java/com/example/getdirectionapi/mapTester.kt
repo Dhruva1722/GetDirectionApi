@@ -35,6 +35,7 @@
     import com.google.android.gms.maps.model.Polyline
     import com.google.android.gms.maps.model.PolylineOptions
     import com.google.android.gms.tasks.Task
+    import com.google.firebase.database.FirebaseDatabase
     import java.util.Timer
     import java.util.TimerTask
 
@@ -49,10 +50,12 @@
 
         private var isTracking = false
 
-        private val timer = Timer()
-
+        private var lastLogTimeMillis: Long = 0
         private var totalDistance: Double = 0.0
 
+
+        private val database = FirebaseDatabase.getInstance()
+        private val locationsReference = database.getReference("locations")
         companion object {
             const val REQUEST_LOCATION_PERMISSION = 1
             const val REQUEST_CHECK_SETTINGS = 2
@@ -79,12 +82,10 @@
 
             fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
             // Initialize location request
             locationRequest = LocationRequest.create().apply {
-                priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
-                interval = 5000 // Update location every 5 seconds
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+                interval = 1000 // Update location every 1 second
             }
         }
 
@@ -143,7 +144,6 @@
                         // User enabled location settings, start tracking
                         startTracking()
                     } else {
-                        // Handle case where user did not enable location settings
                     }
                 }
             }
@@ -162,7 +162,10 @@
                             }
                         }
                     }
+
+
                 }
+
 
                 // Start location updates using FusedLocationProviderClient
                 if (ActivityCompat.checkSelfPermission(
@@ -173,6 +176,13 @@
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     ) != PackageManager.PERMISSION_GRANTED
                 ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
                     return
                 }
                 fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
@@ -185,39 +195,53 @@
 
                 // Stop location updates
                 fusedLocationClient.removeLocationUpdates(locationCallback)
+
+    //            // Clear the Polyline on the map
+    //            polyline.remove()
             }
         }
 
+
+
         private fun updatePolyline(location: Location) {
-            val latLng = LatLng(location.latitude, location.longitude)
+            val currentTimeMillis = System.currentTimeMillis()
 
-            Log.d("----------", "updatePolyline: ${latLng}")
-            // Add the new point to the Polyline
-            val points = polyline.points.toMutableList()
-            points.add(latLng)
-            polyline.points = points
+            // Log only if 10 seconds have passed since the last log
+            if (currentTimeMillis - lastLogTimeMillis >= 10000) {
+                lastLogTimeMillis = currentTimeMillis
 
-            Log.d("Polyline", "Number of points: ${points.size}")
-            for ((index, point) in points.withIndex()) {
-                Log.d("Polyline", "Point $index: $point")
-            }
+                val latLng = LatLng(location.latitude, location.longitude)
+                Log.d("---------", "latlon ----: ${latLng}")
 
-            if (polyline.points.size > 1) {
-                val lastLatLng = polyline.points[polyline.points.size - 2]
-                val distance = calculateDistance(lastLatLng, latLng)
-                totalDistance += distance
-                Log.d("Distance", "Total Distance: $totalDistance km")
+                Log.d("Polyline", "Number of points: ${polyline.points.size}")
+
+                for ((index, point) in polyline.points.withIndex()) {
+                    Log.d("Polyline", "Point $index: lat/lng: (${point.latitude},${point.longitude})")
+                }
+
+                if (polyline.points.size > 1) {
+                    val lastLatLng = polyline.points[polyline.points.size - 2]
+                    val distance = calculateDistance(lastLatLng, latLng)
+                    totalDistance += distance
+                    Log.d("Distance", "Total Distance: $totalDistance km")
+
+                    // Save the data to Firebase
+                    saveLocationToFirebase(location.latitude, location.longitude, totalDistance, currentTimeMillis)
+                }
             }
 
             // Move the camera to the new location with zoom
             mMap.moveCamera(
                 CameraUpdateFactory.newLatLngZoom(
-                    latLng,
-                    20f
+                    LatLng(location.latitude, location.longitude),
+                    22f
                 )
             )
         }
-
+        private fun saveLocationToFirebase(latitude: Double, longitude: Double, distance: Double, timestamp: Long) {
+            val locationData = LocationData(latitude, longitude, distance, timestamp)
+            locationsReference.child(timestamp.toString()).setValue(locationData)
+        }
         override fun onMapReady(googleMap: GoogleMap) {
             mMap = googleMap
 
@@ -229,6 +253,7 @@
             // Create the Polyline and add it to the map
             polyline = mMap.addPolyline(polylineOptions)
         }
+
 
         override fun onRequestPermissionsResult(
             requestCode: Int,
@@ -247,33 +272,30 @@
                 }
             }
         }
-
-        private fun calculateDistance(start: LatLng, end: LatLng): Float {
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                start.latitude, start.longitude,
-                end.latitude, end.longitude, results
-            )
-            return results[0]
-        }
     }
 
-    fun calculateDistance(
-        startLat: Double,
-        startLon: Double,
-        endLat: Double,
-        endLon: Double
-    ): Double {
+    fun calculateDistance(startLatLng: LatLng, endLatLng: LatLng): Double {
         val radius = 6371 // Earth radius in kilometers
 
-        val dLat = Math.toRadians(endLat - startLat)
-        val dLon = Math.toRadians(endLon - startLon)
+        val startLat = Math.toRadians(startLatLng.latitude)
+        val startLon = Math.toRadians(startLatLng.longitude)
+        val endLat = Math.toRadians(endLatLng.latitude)
+        val endLon = Math.toRadians(endLatLng.longitude)
+
+        val dLat = endLat - startLat
+        val dLon = endLon - startLon
 
         val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(startLat)) * cos(Math.toRadians(endLat)) *
-                sin(dLon / 2) * sin(dLon / 2)
+                cos(startLat) * cos(endLat) * sin(dLon / 2) * sin(dLon / 2)
 
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         return radius * c
     }
+
+    data class LocationData(
+        val latitude: Double,
+        val longitude: Double,
+        val distance: Double,
+        val timestamp: Long
+    )
